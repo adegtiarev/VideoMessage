@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,6 +56,14 @@ fun TextVideoScreen(
     var isBold by remember { mutableStateOf(false) }
     var textColor by remember { mutableStateOf(Color.Black) }
     var backgroundColor by remember { mutableStateOf(Color.White) }
+
+    // Состояние видимости меню выбора размера
+    var showSizeMenu by remember { mutableStateOf(false) }
+
+    // Список доступных размеров шрифта
+    val availableFontSizes = remember {
+        listOf(12f, 14f, 16f, 18f, 20f, 24f, 28f, 32f, 36f, 40f, 48f, 56f, 64f, 72f, 96f)
+    }
     // ----------------------------------------------------------
 
     Scaffold(
@@ -69,16 +82,51 @@ fun TextVideoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = {
-                        textSizeSp = if (textSizeSp >= 48f) 16f else textSizeSp + 4f
-                    }) {
-                        Text(
-                            text = "${textSizeSp.toInt()}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                    // 1. Кнопка размера шрифта с выпадающим меню
+                    Box {
+                        IconButton(onClick = { showSizeMenu = true }) {
+                            Text(
+                                text = "${textSizeSp.toInt()}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showSizeMenu,
+                            onDismissRequest = { showSizeMenu = false },
+                            // Небольшой сдвиг, чтобы меню не перекрывало палец
+                            offset = DpOffset(x = 0.dp, y = 10.dp)
+                        ) {
+                            availableFontSizes.forEach { size ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "${size.toInt()} sp",
+                                            // Отображаем текст в меню сразу с нужным размером (опционально, но наглядно)
+                                            // Ограничиваем макс размер в меню, чтобы не ломать UI
+                                            fontSize = if (size > 32f) 32.sp else size.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        textSizeSp = size
+                                        showSizeMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (textSizeSp == size) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
 
+                    // 2. Кнопка стиля шрифта
                     IconButton(onClick = { isBold = !isBold }) {
                         if (isBold) {
                             Icon(
@@ -93,6 +141,7 @@ fun TextVideoScreen(
                         }
                     }
 
+                    // 3. Кнопка цвета текста
                     IconButton(onClick = {
                         textColor = if (textColor == Color.Black) Color.Red else Color.Black
                     }) {
@@ -103,6 +152,7 @@ fun TextVideoScreen(
                         )
                     }
 
+                    // 4. Кнопка цвета фона
                     IconButton(onClick = {
                         backgroundColor = if (backgroundColor == Color.White) Color.Yellow else Color.White
                     }) {
