@@ -21,10 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,8 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import arg.adegtiarev.videomessage.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +76,7 @@ fun HomeScreen(
                             },
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Draw Video")
+                            Icon(painterResource(R.drawable.ic_brush), contentDescription = "Draw Video")
                         }
                         
                         FloatingActionButton(
@@ -88,7 +86,7 @@ fun HomeScreen(
                             },
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(Icons.Default.Create, contentDescription = "Text Video")
+                            Icon(painterResource(R.drawable.ic_letter_a), contentDescription = "Text Video")
                         }
                     }
                 }
