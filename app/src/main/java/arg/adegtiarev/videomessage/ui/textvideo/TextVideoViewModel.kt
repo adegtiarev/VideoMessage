@@ -1,33 +1,25 @@
 package arg.adegtiarev.videomessage.ui.textvideo
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import arg.adegtiarev.videomessage.recorder.VideoRecorder
+import arg.adegtiarev.videomessage.ui.BaseVideoViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class TextVideoViewModel @Inject constructor() : ViewModel() {
+class TextVideoViewModel @Inject constructor(
+    videoRecorder: VideoRecorder
+) : BaseVideoViewModel(videoRecorder) {
 
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording
+    // TODO: Add state for text input (e.g., StateFlow<String>)
 
-    private var lastToggleTime = 0L
+    override fun startRecording() {
+        // TODO: Get output file path
+        // videoRecorder.start(outputFile)
+        // TODO: Start frame generation loop
+    }
 
-    fun onToggleRecording() {
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastToggleTime < 1000) return // Debounce
-        lastToggleTime = currentTime
-
-        viewModelScope.launch {
-            _isRecording.value = !_isRecording.value
-            if (_isRecording.value) {
-                // TODO: Start recording logic
-            } else {
-                // TODO: Stop recording logic
-            }
-        }
+    override fun stopRecording() {
+        videoRecorder.stop()
+        // TODO: Stop frame generation, save to Room, etc.
     }
 }
