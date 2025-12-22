@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -53,14 +54,18 @@ fun TextVideoScreen(
     // --- Временное состояние (позже перенесем во ViewModel) ---
     var text by remember { mutableStateOf("") }
     var textSizeSp by remember { mutableFloatStateOf(24f) }
-    var isBold by remember { mutableStateOf(false) }
+    
+    // Заменяем isBold на параметры стиля и веса
+    var fontWeight by remember { mutableStateOf(FontWeight.Normal) }
+    var fontStyle by remember { mutableStateOf(FontStyle.Normal) }
+    
     var textColor by remember { mutableStateOf(Color.Black) }
     var backgroundColor by remember { mutableStateOf(Color.White) }
 
-    // Состояние видимости меню выбора размера
+    // Состояния видимости меню
     var showSizeMenu by remember { mutableStateOf(false) }
+    var showStyleMenu by remember { mutableStateOf(false) }
 
-    // Список доступных размеров шрифта
     val availableFontSizes = remember {
         listOf(12f, 14f, 16f, 18f, 20f, 24f, 28f, 32f, 36f, 40f, 48f, 56f, 64f, 72f, 96f)
     }
@@ -82,7 +87,7 @@ fun TextVideoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Кнопка размера шрифта с выпадающим меню
+                    // 1. Кнопка размера шрифта
                     Box {
                         IconButton(onClick = { showSizeMenu = true }) {
                             Text(
@@ -95,7 +100,6 @@ fun TextVideoScreen(
                         DropdownMenu(
                             expanded = showSizeMenu,
                             onDismissRequest = { showSizeMenu = false },
-                            // Небольшой сдвиг, чтобы меню не перекрывало палец
                             offset = DpOffset(x = 0.dp, y = 10.dp)
                         ) {
                             availableFontSizes.forEach { size ->
@@ -103,8 +107,6 @@ fun TextVideoScreen(
                                     text = {
                                         Text(
                                             text = "${size.toInt()} sp",
-                                            // Отображаем текст в меню сразу с нужным размером (опционально, но наглядно)
-                                            // Ограничиваем макс размер в меню, чтобы не ломать UI
                                             fontSize = if (size > 32f) 32.sp else size.sp
                                         )
                                     },
@@ -126,17 +128,78 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // 2. Кнопка стиля шрифта
-                    IconButton(onClick = { isBold = !isBold }) {
-                        if (isBold) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_format_bold),
-                                contentDescription = "Bold"
+                    // 2. Кнопка стиля шрифта (Bold, Italic, etc.)
+                    Box {
+                        IconButton(onClick = { showStyleMenu = true }) {
+                            // Отображаем букву "A" с текущим примененным стилем
+                            Text(
+                                text = "A",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = fontWeight,
+                                fontStyle = fontStyle
                             )
-                        } else {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_text_style),
-                                contentDescription = "Normal"
+                        }
+
+                        DropdownMenu(
+                            expanded = showStyleMenu,
+                            onDismissRequest = { showStyleMenu = false },
+                            offset = DpOffset(x = 0.dp, y = 10.dp)
+                        ) {
+                            // Normal
+                            DropdownMenuItem(
+                                text = { Text("Normal", fontWeight = FontWeight.Normal, fontStyle = FontStyle.Normal) },
+                                onClick = {
+                                    fontWeight = FontWeight.Normal
+                                    fontStyle = FontStyle.Normal
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (fontWeight == FontWeight.Normal && fontStyle == FontStyle.Normal) {
+                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                            // Bold
+                            DropdownMenuItem(
+                                text = { Text("Bold", fontWeight = FontWeight.Bold, fontStyle = FontStyle.Normal) },
+                                onClick = {
+                                    fontWeight = FontWeight.Bold
+                                    fontStyle = FontStyle.Normal
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (fontWeight == FontWeight.Bold && fontStyle == FontStyle.Normal) {
+                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                            // Italic
+                            DropdownMenuItem(
+                                text = { Text("Italic", fontWeight = FontWeight.Normal, fontStyle = FontStyle.Italic) },
+                                onClick = {
+                                    fontWeight = FontWeight.Normal
+                                    fontStyle = FontStyle.Italic
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (fontWeight == FontWeight.Normal && fontStyle == FontStyle.Italic) {
+                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                            // Bold Italic
+                            DropdownMenuItem(
+                                text = { Text("Bold Italic", fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic) },
+                                onClick = {
+                                    fontWeight = FontWeight.Bold
+                                    fontStyle = FontStyle.Italic
+                                    showStyleMenu = false
+                                },
+                                trailingIcon = {
+                                    if (fontWeight == FontWeight.Bold && fontStyle == FontStyle.Italic) {
+                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             )
                         }
                     }
@@ -187,7 +250,8 @@ fun TextVideoScreen(
                 modifier = Modifier.fillMaxSize(),
                 textStyle = TextStyle(
                     fontSize = textSizeSp.sp,
-                    fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = fontWeight,
+                    fontStyle = fontStyle,
                     color = textColor
                 ),
                 colors = TextFieldDefaults.colors(
