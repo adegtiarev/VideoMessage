@@ -1,5 +1,6 @@
 package arg.adegtiarev.videomessage.ui.textvideo
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +56,6 @@ fun TextVideoScreen(
     var text by remember { mutableStateOf("") }
     var textSizeSp by remember { mutableFloatStateOf(24f) }
     
-    // Заменяем isBold на параметры стиля и веса
     var fontWeight by remember { mutableStateOf(FontWeight.Normal) }
     var fontStyle by remember { mutableStateOf(FontStyle.Normal) }
     
@@ -65,9 +65,27 @@ fun TextVideoScreen(
     // Состояния видимости меню
     var showSizeMenu by remember { mutableStateOf(false) }
     var showStyleMenu by remember { mutableStateOf(false) }
+    var showTextColorMenu by remember { mutableStateOf(false) }
+    var showBgColorMenu by remember { mutableStateOf(false) }
 
     val availableFontSizes = remember {
         listOf(12f, 14f, 16f, 18f, 20f, 24f, 28f, 32f, 36f, 40f, 48f, 56f, 64f, 72f, 96f)
+    }
+
+    val availableColors = remember {
+        listOf(
+            "Black" to Color.Black,
+            "Dark Gray" to Color.DarkGray,
+            "Gray" to Color.Gray,
+            "Light Gray" to Color.LightGray,
+            "White" to Color.White,
+            "Red" to Color.Red,
+            "Green" to Color.Green,
+            "Blue" to Color.Blue,
+            "Yellow" to Color.Yellow,
+            "Cyan" to Color.Cyan,
+            "Magenta" to Color.Magenta
+        )
     }
     // ----------------------------------------------------------
 
@@ -128,10 +146,9 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // 2. Кнопка стиля шрифта (Bold, Italic, etc.)
+                    // 2. Кнопка стиля шрифта
                     Box {
                         IconButton(onClick = { showStyleMenu = true }) {
-                            // Отображаем букву "A" с текущим примененным стилем
                             Text(
                                 text = "A",
                                 style = MaterialTheme.typography.titleLarge,
@@ -145,93 +162,119 @@ fun TextVideoScreen(
                             onDismissRequest = { showStyleMenu = false },
                             offset = DpOffset(x = 0.dp, y = 10.dp)
                         ) {
-                            // Normal
-                            DropdownMenuItem(
-                                text = { Text("Normal", fontWeight = FontWeight.Normal, fontStyle = FontStyle.Normal) },
-                                onClick = {
-                                    fontWeight = FontWeight.Normal
-                                    fontStyle = FontStyle.Normal
-                                    showStyleMenu = false
-                                },
-                                trailingIcon = {
-                                    if (fontWeight == FontWeight.Normal && fontStyle == FontStyle.Normal) {
-                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
+                            val styles = listOf(
+                                Triple("Normal", FontWeight.Normal, FontStyle.Normal),
+                                Triple("Bold", FontWeight.Bold, FontStyle.Normal),
+                                Triple("Italic", FontWeight.Normal, FontStyle.Italic),
+                                Triple("Bold Italic", FontWeight.Bold, FontStyle.Italic)
                             )
-                            // Bold
-                            DropdownMenuItem(
-                                text = { Text("Bold", fontWeight = FontWeight.Bold, fontStyle = FontStyle.Normal) },
-                                onClick = {
-                                    fontWeight = FontWeight.Bold
-                                    fontStyle = FontStyle.Normal
-                                    showStyleMenu = false
-                                },
-                                trailingIcon = {
-                                    if (fontWeight == FontWeight.Bold && fontStyle == FontStyle.Normal) {
-                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                            
+                            styles.forEach { (name, weight, style) ->
+                                DropdownMenuItem(
+                                    text = { Text(name, fontWeight = weight, fontStyle = style) },
+                                    onClick = {
+                                        fontWeight = weight
+                                        fontStyle = style
+                                        showStyleMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (fontWeight == weight && fontStyle == style) {
+                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
-                                }
-                            )
-                            // Italic
-                            DropdownMenuItem(
-                                text = { Text("Italic", fontWeight = FontWeight.Normal, fontStyle = FontStyle.Italic) },
-                                onClick = {
-                                    fontWeight = FontWeight.Normal
-                                    fontStyle = FontStyle.Italic
-                                    showStyleMenu = false
-                                },
-                                trailingIcon = {
-                                    if (fontWeight == FontWeight.Normal && fontStyle == FontStyle.Italic) {
-                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                            )
-                            // Bold Italic
-                            DropdownMenuItem(
-                                text = { Text("Bold Italic", fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic) },
-                                onClick = {
-                                    fontWeight = FontWeight.Bold
-                                    fontStyle = FontStyle.Italic
-                                    showStyleMenu = false
-                                },
-                                trailingIcon = {
-                                    if (fontWeight == FontWeight.Bold && fontStyle == FontStyle.Italic) {
-                                        Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
 
                     // 3. Кнопка цвета текста
-                    IconButton(onClick = {
-                        textColor = if (textColor == Color.Black) Color.Red else Color.Black
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_text_color),
-                            contentDescription = "Text Color",
-                            tint = textColor
-                        )
+                    Box {
+                        IconButton(onClick = { showTextColorMenu = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_text_color),
+                                contentDescription = "Text Color",
+                                tint = textColor
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showTextColorMenu,
+                            onDismissRequest = { showTextColorMenu = false },
+                            offset = DpOffset(x = 0.dp, y = 10.dp)
+                        ) {
+                            availableColors.forEach { (name, color) ->
+                                DropdownMenuItem(
+                                    text = { Text(name) },
+                                    leadingIcon = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                                .border(1.dp, Color.Gray, CircleShape)
+                                        )
+                                    },
+                                    onClick = {
+                                        textColor = color
+                                        showTextColorMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (textColor == color) {
+                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     // 4. Кнопка цвета фона
-                    IconButton(onClick = {
-                        backgroundColor = if (backgroundColor == Color.White) Color.Yellow else Color.White
-                    }) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
-                            contentAlignment = Alignment.Center
+                    Box {
+                        IconButton(onClick = { showBgColorMenu = true }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_bg_color),
+                                    contentDescription = "Background Color",
+                                    tint = backgroundColor,
+                                    modifier = Modifier.padding(2.dp)
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = showBgColorMenu,
+                            onDismissRequest = { showBgColorMenu = false },
+                            offset = DpOffset(x = 0.dp, y = 10.dp)
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_bg_color),
-                                contentDescription = "Background Color",
-                                tint = backgroundColor,
-                                modifier = Modifier.padding(2.dp)
-                            )
+                            availableColors.forEach { (name, color) ->
+                                DropdownMenuItem(
+                                    text = { Text(name) },
+                                    leadingIcon = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                                .border(1.dp, Color.Gray, CircleShape)
+                                        )
+                                    },
+                                    onClick = {
+                                        backgroundColor = color
+                                        showBgColorMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (backgroundColor == color) {
+                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
