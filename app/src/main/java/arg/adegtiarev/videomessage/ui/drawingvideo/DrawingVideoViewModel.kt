@@ -29,8 +29,9 @@ data class DrawingUiState(
     val brushColor: Color = Color.Black,
     val brushThickness: Float = 10f,
     val backgroundColor: Color = Color.White,
-    // Список завершенных линий
-    val lines: List<DrawingLine> = emptyList()
+    val lines: List<DrawingLine> = emptyList(),
+    val viewWidth: Int = 0,
+    val viewHeight: Int = 0
 )
 
 @HiltViewModel
@@ -46,12 +47,13 @@ class DrawingVideoViewModel @Inject constructor(
     private val _navigateToPlayer = MutableSharedFlow<String>()
     val navigateToPlayer = _navigateToPlayer.asSharedFlow()
 
-    // Внутренняя текущая линия только для рекордера. UI о ней знать не нужно, он рисует её сам.
     private var activeLine: DrawingLine? = null
-
     private var currentOutputFile: File? = null
 
-    // Настройки кисти
+    fun updateCanvasSize(width: Int, height: Int) {
+        _uiState.update { it.copy(viewWidth = width, viewHeight = height) }
+    }
+
     fun updateBrush(color: Color? = null, thickness: Float? = null) {
         _uiState.update { 
             it.copy(
@@ -72,43 +74,34 @@ class DrawingVideoViewModel @Inject constructor(
         processFrame()
     }
 
-    // Обработка рисования
     fun onDragStart(startPoint: Offset) {
         val currentState = _uiState.value
         val path = android.graphics.Path().apply {
             moveTo(startPoint.x, startPoint.y)
         }
         
-        // Создаем новую активную линию
         activeLine = DrawingLine(
             path = path,
             color = currentState.brushColor.toArgb(),
             strokeWidth = currentState.brushThickness
         )
         
-        // UI State НЕ обновляем, чтобы избежать лишней рекомпозиции
         processFrame()
     }
 
     fun onDrag(newPoint: Offset) {
         val line = activeLine ?: return
-        
-        // Просто обновляем путь
         line.path.lineTo(newPoint.x, newPoint.y)
-        
-        // Отправляем кадр в видео, но UI State не трогаем
         processFrame()
     }
 
     fun onDragEnd() {
         val line = activeLine ?: return
         
-        // Линия закончена -> добавляем её в список завершенных линий в UI State
         _uiState.update { 
             it.copy(lines = it.lines + line) 
         }
         activeLine = null
-        
         processFrame()
     }
 
@@ -118,7 +111,6 @@ class DrawingVideoViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             val state = _uiState.value
             
-            // Собираем все линии для кадра: завершенные + текущая активная
             val allLines = if (activeLine != null) {
                 state.lines + activeLine!!
             } else {
@@ -127,7 +119,9 @@ class DrawingVideoViewModel @Inject constructor(
 
             val frameData = DrawingFrameData(
                 lines = allLines,
-                backgroundColor = state.backgroundColor.toArgb()
+                backgroundColor = state.backgroundColor.toArgb(),
+                viewWidth = state.viewWidth,
+                viewHeight = state.viewHeight
             )
 
             val bitmap = frameProducer.createFrame(frameData)

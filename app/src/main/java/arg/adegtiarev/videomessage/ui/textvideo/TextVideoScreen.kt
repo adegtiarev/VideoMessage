@@ -1,5 +1,6 @@
 package arg.adegtiarev.videomessage.ui.textvideo
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -60,49 +61,45 @@ fun TextVideoScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
+    // Блокируем системную кнопку "Назад" во время записи
+    BackHandler(enabled = isRecording) {
+        // Можно показать Toast, что идет запись
+    }
+
     var textFieldValue by remember { mutableStateOf(TextFieldValue(text = uiState.text)) }
     val scrollState = rememberScrollState()
 
-    // Храним результат верстки текста, чтобы знать координаты курсора
+    // Храним результат верстки текста
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
-    // Обновляем scrollY во ViewModel
     LaunchedEffect(scrollState.value) {
         viewModel.updateTextState(scrollY = scrollState.value)
     }
 
-    // ЛОГИКА АВТО-СКРОЛЛА К КУРСОРУ
     LaunchedEffect(textFieldValue.selection, layoutResult) {
         val layout = layoutResult ?: return@LaunchedEffect
-        // Если текст пустой или выделение некорректно - выходим
         if (textFieldValue.text.isEmpty()) return@LaunchedEffect
         
         val selectionEnd = textFieldValue.selection.end
         
-        // Получаем прямоугольник курсора относительно верха BasicTextField
         val cursorRect = try {
             layout.getCursorRect(selectionEnd)
         } catch (e: Exception) {
-            // Иногда бывает out of bounds при быстром удалении
             return@LaunchedEffect
         }
 
         val cursorBottom = cursorRect.bottom
         val cursorTop = cursorRect.top
 
-        val viewportHeight = uiState.viewHeight // Высота видимой области (которую мы трекаем в onGloballyPositioned)
+        val viewportHeight = uiState.viewHeight
         val currentScroll = scrollState.value
-        
-        // Отступы для комфортного ввода (чтобы курсор не прилипал к краю)
         val paddingCursor = 50 
 
-        // Если курсор ушел ВНИЗ за экран
         if (cursorBottom > currentScroll + viewportHeight - paddingCursor) {
             val targetScroll = cursorBottom - viewportHeight + paddingCursor
             scrollState.animateScrollTo(targetScroll.toInt())
         }
 
-        // Если курсор ушел ВВЕРХ за экран
         if (cursorTop < currentScroll + paddingCursor) {
             val targetScroll = cursorTop - paddingCursor
             scrollState.animateScrollTo(targetScroll.toInt())
@@ -145,7 +142,8 @@ fun TextVideoScreen(
             VideoCreatorTopBar(
                 title = "Create Text Video",
                 isRecording = isRecording,
-                onBack = onBack,
+                // Блокируем кнопку "Назад" в тулбаре во время записи
+                onBack = { if (!isRecording) onBack() },
                 onToggleRecording = viewModel::onToggleRecording
             )
         },
@@ -156,7 +154,6 @@ fun TextVideoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Size Menu
                     Box {
                         IconButton(onClick = { showSizeMenu = true }) {
                             Text(
@@ -187,7 +184,6 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // Style Menu
                     Box {
                         IconButton(onClick = { showStyleMenu = true }) {
                             Text(
@@ -225,7 +221,6 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // Text Color Menu
                     Box {
                         IconButton(onClick = { showTextColorMenu = true }) {
                             Icon(painterResource(R.drawable.ic_text_color), "Text Color", tint = uiState.textColor)
@@ -257,7 +252,6 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // Bg Color Menu
                     Box {
                         IconButton(onClick = { showBgColorMenu = true }) {
                             Box(
@@ -298,7 +292,6 @@ fun TextVideoScreen(
         },
         modifier = Modifier.imePadding()
     ) { paddingValues ->
-        // Основной контейнер с цветом фона
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -312,7 +305,6 @@ fun TextVideoScreen(
                 color = uiState.textColor
             )
             
-            // Используем BasicTextField для ручного управления скроллом
             BasicTextField(
                 value = textFieldValue,
                 onValueChange = { newValue ->
@@ -322,7 +314,7 @@ fun TextVideoScreen(
                         selection = newValue.selection
                     )
                 },
-                onTextLayout = { result -> layoutResult = result }, // Захватываем результат layout
+                onTextLayout = { result -> layoutResult = result },
                 textStyle = textStyle,
                 cursorBrush = SolidColor(Color.Green),
                 modifier = Modifier

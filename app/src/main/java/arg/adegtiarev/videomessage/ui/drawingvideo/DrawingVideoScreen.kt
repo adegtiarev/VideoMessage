@@ -1,5 +1,6 @@
 package arg.adegtiarev.videomessage.ui.drawingvideo
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -56,13 +58,14 @@ fun DrawingVideoScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Локальное состояние для текущей линии (Preview)
-    // Используем Compose Path для локального рисования
+    // Блокируем системную кнопку "Назад" во время записи
+    BackHandler(enabled = isRecording) {
+        // Игнорируем
+    }
+
     var currentPath by remember { mutableStateOf<Path?>(null) }
-    // Счетчик для форсирования перерисовки при drag, так как Path мутабелен
     var drawTrigger by remember { mutableStateOf(0L) }
 
-    // Состояния видимости меню
     var showBrushSizeMenu by remember { mutableStateOf(false) }
     var showBrushColorMenu by remember { mutableStateOf(false) }
     var showBgColorMenu by remember { mutableStateOf(false) }
@@ -87,7 +90,6 @@ fun DrawingVideoScreen(
         )
     }
     
-    // Навигация
     LaunchedEffect(Unit) {
         viewModel.navigateToPlayer.collect { videoPath ->
             onNavigateToPlayer(videoPath)
@@ -99,7 +101,8 @@ fun DrawingVideoScreen(
             VideoCreatorTopBar(
                 title = "Create Drawing Video",
                 isRecording = isRecording,
-                onBack = onBack,
+                // Блокируем кнопку "Назад" в тулбаре во время записи
+                onBack = { if (!isRecording) onBack() },
                 onToggleRecording = viewModel::onToggleRecording
             )
         },
@@ -183,10 +186,9 @@ fun DrawingVideoScreen(
                     Box {
                         IconButton(onClick = { showBgColorMenu = true }) {
                             Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+                                modifier = Modifier.size(24.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -231,45 +233,37 @@ fun DrawingVideoScreen(
         }
     ) { paddingValues ->
         
-        // Холст для рисования
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(uiState.backgroundColor)
+                .onGloballyPositioned { coordinates ->
+                    viewModel.updateCanvasSize(coordinates.size.width, coordinates.size.height)
+                }
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
-                            // Начинаем локальное рисование
                             val path = Path().apply { moveTo(offset.x, offset.y) }
                             currentPath = path
-                            
-                            // Сообщаем ViewModel
                             viewModel.onDragStart(offset)
                         },
                         onDrag = { change, _ ->
                             change.consume()
-                            // Обновляем локальный путь
                             currentPath?.lineTo(change.position.x, change.position.y)
-                            drawTrigger++ // Форсируем рекомпозицию для Canvas
-                            
-                            // Сообщаем ViewModel (асинхронно для записи)
+                            drawTrigger++ 
                             viewModel.onDrag(change.position)
                         },
                         onDragEnd = {
-                            // Сбрасываем локальное превью, так как линия теперь в uiState.lines
                             currentPath = null
                             viewModel.onDragEnd()
                         }
                     )
                 }
         ) {
-            // Читаем drawTrigger чтобы Compose знал, что надо перерисовать при onDrag
             @Suppress("UNUSED_VARIABLE")
             val trigger = drawTrigger
 
-            // 1. Рисуем уже завершенные линии (из ViewModel)
-            // Лучше использовать nativeCanvas для отрисовки android.graphics.Path
             drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
                     style = android.graphics.Paint.Style.STROKE
@@ -285,8 +279,6 @@ fun DrawingVideoScreen(
                 }
             }
 
-            // 2. Рисуем текущую линию (локальное превью)
-            // Используем Compose DrawScope для локального Path
             currentPath?.let { path ->
                 drawPath(
                     path = path,
