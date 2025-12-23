@@ -33,7 +33,6 @@ data class TextVideoUiState(
     val fontStyle: FontStyle = FontStyle.Normal,
     val textColor: Color = Color.Black,
     val backgroundColor: Color = Color.White,
-    // Данные о выделении и скролле нужны для точного воспроизведения
     val selection: TextRange = TextRange.Zero,
     val scrollY: Int = 0,
     val viewWidth: Int = 1080,
@@ -55,6 +54,10 @@ class TextVideoViewModel @Inject constructor(
 
     private var currentOutputFile: File? = null
 
+    // Переменные для фиксации размеров на время записи
+    private var recordingViewWidth: Int = 0
+    private var recordingViewHeight: Int = 0
+
     fun updateTextState(
         text: String? = null,
         selection: TextRange? = null,
@@ -71,7 +74,10 @@ class TextVideoViewModel @Inject constructor(
                 viewHeight = viewHeight ?: currentState.viewHeight
             )
         }
-        processFrame()
+        // Если запись не идет, мы не генерируем кадр
+        if (isRecording.value) {
+            processFrame()
+        }
     }
 
     fun updateStyle(
@@ -90,7 +96,9 @@ class TextVideoViewModel @Inject constructor(
                 backgroundColor = backgroundColor ?: currentState.backgroundColor
             )
         }
-        processFrame()
+        if (isRecording.value) {
+            processFrame()
+        }
     }
 
     private fun processFrame() {
@@ -103,9 +111,10 @@ class TextVideoViewModel @Inject constructor(
                 selectionStart = state.selection.start,
                 selectionEnd = state.selection.end,
                 scrollY = state.scrollY,
-                viewWidth = state.viewWidth,
-                viewHeight = state.viewHeight,
-                textSizePx = spToPx(state.textSizeSp), // Конвертация SP -> PX (примерная)
+                // Используем зафиксированные размеры
+                viewWidth = recordingViewWidth,
+                viewHeight = recordingViewHeight,
+                textSizePx = spToPx(state.textSizeSp),
                 textColor = state.textColor.toArgb(),
                 backgroundColor = state.backgroundColor.toArgb(),
                 isBold = state.fontWeight == FontWeight.Bold,
@@ -117,26 +126,33 @@ class TextVideoViewModel @Inject constructor(
         }
     }
 
-    // Простая конвертация, можно улучшить передав Density
     private fun spToPx(sp: Float): Float {
         return sp * context.resources.displayMetrics.scaledDensity
     }
 
     override fun startRecording() {
+        // Фиксируем размеры в момент старта
+        val currentState = _uiState.value
+        recordingViewWidth = currentState.viewWidth
+        recordingViewHeight = currentState.viewHeight
+
         val fileName = "VIDEO_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.mp4"
         val outputFile = File(context.filesDir, fileName)
         currentOutputFile = outputFile
         
         videoRecorder.start(outputFile)
         
-        // Сразу записываем первый кадр
+        // Сразу записываем первый кадр с зафиксированными размерами
         processFrame()
     }
 
     override fun stopRecording() {
         videoRecorder.stop()
         
-        // После остановки отправляем событие навигации
+        // Сбрасываем зафиксированные размеры
+        recordingViewWidth = 0
+        recordingViewHeight = 0
+
         currentOutputFile?.let { file ->
             viewModelScope.launch {
                 _navigateToPlayer.emit(file.name)
