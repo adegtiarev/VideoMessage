@@ -36,7 +36,8 @@ data class TextVideoUiState(
     val selection: TextRange = TextRange.Zero,
     val scrollY: Int = 0,
     val viewWidth: Int = 1080,
-    val viewHeight: Int = 1920
+    val viewHeight: Int = 1920,
+    val padding: Int = 0
 )
 
 @HiltViewModel
@@ -63,7 +64,8 @@ class TextVideoViewModel @Inject constructor(
         selection: TextRange? = null,
         scrollY: Int? = null,
         viewWidth: Int? = null,
-        viewHeight: Int? = null
+        viewHeight: Int? = null,
+        padding: Int? = null
     ) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -71,7 +73,8 @@ class TextVideoViewModel @Inject constructor(
                 selection = selection ?: currentState.selection,
                 scrollY = scrollY ?: currentState.scrollY,
                 viewWidth = viewWidth ?: currentState.viewWidth,
-                viewHeight = viewHeight ?: currentState.viewHeight
+                viewHeight = viewHeight ?: currentState.viewHeight,
+                padding = padding ?: currentState.padding
             )
         }
         // Если запись не идет, мы не генерируем кадр
@@ -118,7 +121,8 @@ class TextVideoViewModel @Inject constructor(
                 textColor = state.textColor.toArgb(),
                 backgroundColor = state.backgroundColor.toArgb(),
                 isBold = state.fontWeight == FontWeight.Bold,
-                isItalic = state.fontStyle == FontStyle.Italic
+                isItalic = state.fontStyle == FontStyle.Italic,
+                padding = state.padding
             )
             
             val bitmap = frameProducer.createFrame(frameData)

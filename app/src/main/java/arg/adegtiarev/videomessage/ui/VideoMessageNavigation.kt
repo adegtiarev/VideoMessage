@@ -55,9 +55,8 @@ fun VideoMessageNavigation(
                 }
             )
         }
-        composable(Destinations.PLAYER) { backStackEntry ->
-            val videoPath = backStackEntry.arguments?.getString("videoPath") ?: ""
-            PlayerScreen(videoPath = videoPath, onBack = { navController.popBackStack() })
+        composable(Destinations.PLAYER) {
+            PlayerScreen(onBack = { navController.popBackStack() })
         }
     }
 }

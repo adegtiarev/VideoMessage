@@ -89,7 +89,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun shareVideo(context: Context) {
+    fun shareVideo() {
         if (!videoFile.exists()) return
 
         val uri = FileProvider.getUriForFile(
@@ -102,6 +102,8 @@ class PlayerViewModel @Inject constructor(
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Добавляем флаг, чтобы запустить активити из контекста приложения
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(Intent.createChooser(intent, "Share video"))
     }

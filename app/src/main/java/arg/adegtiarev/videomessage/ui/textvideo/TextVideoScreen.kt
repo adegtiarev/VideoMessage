@@ -15,8 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -25,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -71,6 +69,9 @@ fun TextVideoScreen(
 
     // Храним результат верстки текста
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
+    val density = LocalDensity.current
+    val paddingInPx = with(density) { 16.dp.toPx() }.toInt()
 
     LaunchedEffect(scrollState.value) {
         viewModel.updateTextState(scrollY = scrollState.value)
@@ -176,7 +177,7 @@ fun TextVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.textSizeSp == size) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -213,7 +214,7 @@ fun TextVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.fontWeight == weight && uiState.fontStyle == style) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -244,7 +245,7 @@ fun TextVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.textColor == color) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -280,7 +281,7 @@ fun TextVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.backgroundColor == color) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -324,7 +325,8 @@ fun TextVideoScreen(
                     .onGloballyPositioned { coordinates ->
                         viewModel.updateTextState(
                              viewWidth = coordinates.size.width,
-                             viewHeight = coordinates.parentLayoutCoordinates?.size?.height ?: coordinates.size.height
+                             viewHeight = coordinates.parentLayoutCoordinates?.size?.height ?: coordinates.size.height,
+                             padding = paddingInPx
                         )
                     },
                 decorationBox = { innerTextField ->

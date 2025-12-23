@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -140,7 +138,7 @@ fun DrawingVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.brushThickness == brushSize) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -174,7 +172,7 @@ fun DrawingVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.brushColor == color) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -186,9 +184,10 @@ fun DrawingVideoScreen(
                     Box {
                         IconButton(onClick = { showBgColorMenu = true }) {
                             Box(
-                                modifier = Modifier.size(24.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -216,7 +215,7 @@ fun DrawingVideoScreen(
                                     },
                                     trailingIcon = {
                                         if (uiState.backgroundColor == color) {
-                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                                            Icon(painterResource(R.drawable.ic_check), "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )

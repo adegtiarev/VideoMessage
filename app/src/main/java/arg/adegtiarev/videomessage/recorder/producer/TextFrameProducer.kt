@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.Layout
-import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.StaticLayout
@@ -35,7 +34,7 @@ data class TextFrameData(
     val textSizePx: Float = 48f,
     val textColor: Int = Color.BLACK,
     val backgroundColor: Int = Color.WHITE,
-    val padding: Int = 40, // Примерно 16dp
+    val padding: Int = 0,
     val isBold: Boolean = false,
     val isItalic: Boolean = false
 )

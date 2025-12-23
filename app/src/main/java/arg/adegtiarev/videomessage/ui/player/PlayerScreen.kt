@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -34,11 +33,9 @@ import arg.adegtiarev.videomessage.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
-    videoPath: String,
     onBack: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
@@ -53,7 +50,7 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.shareVideo(context) }) {
+                    IconButton(onClick = { viewModel.shareVideo() }) {
                         Icon(painterResource(R.drawable.ic_share), contentDescription = "Share")
                     }
                     IconButton(onClick = {
