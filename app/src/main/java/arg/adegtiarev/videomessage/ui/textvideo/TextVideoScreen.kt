@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.BottomAppBar
@@ -21,7 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,8 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,15 +54,61 @@ import arg.adegtiarev.videomessage.ui.components.VideoCreatorTopBar
 @Composable
 fun TextVideoScreen(
     onBack: () -> Unit,
+    onNavigateToPlayer: (String) -> Unit,
     viewModel: TextVideoViewModel = hiltViewModel()
 ) {
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Локальное состояние для TextFieldValue, чтобы курсор работал корректно
     var textFieldValue by remember { mutableStateOf(TextFieldValue(text = uiState.text)) }
+    val scrollState = rememberScrollState()
 
-    // Состояния видимости меню
+    // Храним результат верстки текста, чтобы знать координаты курсора
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
+    // Обновляем scrollY во ViewModel
+    LaunchedEffect(scrollState.value) {
+        viewModel.updateTextState(scrollY = scrollState.value)
+    }
+
+    // ЛОГИКА АВТО-СКРОЛЛА К КУРСОРУ
+    LaunchedEffect(textFieldValue.selection, layoutResult) {
+        val layout = layoutResult ?: return@LaunchedEffect
+        // Если текст пустой или выделение некорректно - выходим
+        if (textFieldValue.text.isEmpty()) return@LaunchedEffect
+        
+        val selectionEnd = textFieldValue.selection.end
+        
+        // Получаем прямоугольник курсора относительно верха BasicTextField
+        val cursorRect = try {
+            layout.getCursorRect(selectionEnd)
+        } catch (e: Exception) {
+            // Иногда бывает out of bounds при быстром удалении
+            return@LaunchedEffect
+        }
+
+        val cursorBottom = cursorRect.bottom
+        val cursorTop = cursorRect.top
+
+        val viewportHeight = uiState.viewHeight // Высота видимой области (которую мы трекаем в onGloballyPositioned)
+        val currentScroll = scrollState.value
+        
+        // Отступы для комфортного ввода (чтобы курсор не прилипал к краю)
+        val paddingCursor = 50 
+
+        // Если курсор ушел ВНИЗ за экран
+        if (cursorBottom > currentScroll + viewportHeight - paddingCursor) {
+            val targetScroll = cursorBottom - viewportHeight + paddingCursor
+            scrollState.animateScrollTo(targetScroll.toInt())
+        }
+
+        // Если курсор ушел ВВЕРХ за экран
+        if (cursorTop < currentScroll + paddingCursor) {
+            val targetScroll = cursorTop - paddingCursor
+            scrollState.animateScrollTo(targetScroll.toInt())
+        }
+    }
+
     var showSizeMenu by remember { mutableStateOf(false) }
     var showStyleMenu by remember { mutableStateOf(false) }
     var showTextColorMenu by remember { mutableStateOf(false) }
@@ -84,13 +134,9 @@ fun TextVideoScreen(
         )
     }
 
-    // Обработка навигации
     LaunchedEffect(Unit) {
         viewModel.navigateToPlayer.collect { videoPath ->
-            // TODO: реализовать переход к плееру, пока просто лог или ничего
-            // onNavigateToPlayer(videoPath)
-             println("Video saved to: $videoPath")
-             // Можно вызвать колбэк, если бы он был передан
+            onNavigateToPlayer(videoPath)
         }
     }
 
@@ -110,7 +156,7 @@ fun TextVideoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Кнопка размера шрифта
+                    // Size Menu
                     Box {
                         IconButton(onClick = { showSizeMenu = true }) {
                             Text(
@@ -119,7 +165,6 @@ fun TextVideoScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-
                         DropdownMenu(
                             expanded = showSizeMenu,
                             onDismissRequest = { showSizeMenu = false },
@@ -127,23 +172,14 @@ fun TextVideoScreen(
                         ) {
                             availableFontSizes.forEach { size ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = "${size.toInt()} sp",
-                                            fontSize = if (size > 32f) 32.sp else size.sp
-                                        )
-                                    },
+                                    text = { Text(text = "${size.toInt()} sp", fontSize = if (size > 32f) 32.sp else size.sp) },
                                     onClick = {
                                         viewModel.updateStyle(textSizeSp = size)
                                         showSizeMenu = false
                                     },
                                     trailingIcon = {
                                         if (uiState.textSizeSp == size) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 )
@@ -151,7 +187,7 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // 2. Кнопка стиля шрифта
+                    // Style Menu
                     Box {
                         IconButton(onClick = { showStyleMenu = true }) {
                             Text(
@@ -161,7 +197,6 @@ fun TextVideoScreen(
                                 fontStyle = uiState.fontStyle
                             )
                         }
-
                         DropdownMenu(
                             expanded = showStyleMenu,
                             onDismissRequest = { showStyleMenu = false },
@@ -173,7 +208,6 @@ fun TextVideoScreen(
                                 Triple("Italic", FontWeight.Normal, FontStyle.Italic),
                                 Triple("Bold Italic", FontWeight.Bold, FontStyle.Italic)
                             )
-                            
                             styles.forEach { (name, weight, style) ->
                                 DropdownMenuItem(
                                     text = { Text(name, fontWeight = weight, fontStyle = style) },
@@ -191,16 +225,11 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // 3. Кнопка цвета текста
+                    // Text Color Menu
                     Box {
                         IconButton(onClick = { showTextColorMenu = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_text_color),
-                                contentDescription = "Text Color",
-                                tint = uiState.textColor
-                            )
+                            Icon(painterResource(R.drawable.ic_text_color), "Text Color", tint = uiState.textColor)
                         }
-
                         DropdownMenu(
                             expanded = showTextColorMenu,
                             onDismissRequest = { showTextColorMenu = false },
@@ -211,11 +240,7 @@ fun TextVideoScreen(
                                     text = { Text(name) },
                                     leadingIcon = {
                                         Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(color)
-                                                .border(1.dp, Color.Gray, CircleShape)
+                                            modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape)
                                         )
                                     },
                                     onClick = {
@@ -232,25 +257,16 @@ fun TextVideoScreen(
                         }
                     }
 
-                    // 4. Кнопка цвета фона
+                    // Bg Color Menu
                     Box {
                         IconButton(onClick = { showBgColorMenu = true }) {
                             Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+                                modifier = Modifier.size(24.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_bg_color),
-                                    contentDescription = "Background Color",
-                                    tint = uiState.backgroundColor,
-                                    modifier = Modifier.padding(2.dp)
-                                )
+                                Icon(painterResource(R.drawable.ic_bg_color), "Background Color", tint = uiState.backgroundColor, modifier = Modifier.padding(2.dp))
                             }
                         }
-
                         DropdownMenu(
                             expanded = showBgColorMenu,
                             onDismissRequest = { showBgColorMenu = false },
@@ -261,11 +277,7 @@ fun TextVideoScreen(
                                     text = { Text(name) },
                                     leadingIcon = {
                                         Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(color)
-                                                .border(1.dp, Color.Gray, CircleShape)
+                                            modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape)
                                         )
                                     },
                                     onClick = {
@@ -286,12 +298,22 @@ fun TextVideoScreen(
         },
         modifier = Modifier.imePadding()
     ) { paddingValues ->
+        // Основной контейнер с цветом фона
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(uiState.backgroundColor)
         ) {
-            TextField(
+            val textStyle = TextStyle(
+                fontSize = uiState.textSizeSp.sp,
+                fontWeight = uiState.fontWeight,
+                fontStyle = uiState.fontStyle,
+                color = uiState.textColor
+            )
+            
+            // Используем BasicTextField для ручного управления скроллом
+            BasicTextField(
                 value = textFieldValue,
                 onValueChange = { newValue ->
                     textFieldValue = newValue
@@ -300,28 +322,28 @@ fun TextVideoScreen(
                         selection = newValue.selection
                     )
                 },
+                onTextLayout = { result -> layoutResult = result }, // Захватываем результат layout
+                textStyle = textStyle,
+                cursorBrush = SolidColor(Color.Green),
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp)
                     .onGloballyPositioned { coordinates ->
-                         viewModel.updateTextState(
+                        viewModel.updateTextState(
                              viewWidth = coordinates.size.width,
-                             viewHeight = coordinates.size.height
-                         )
+                             viewHeight = coordinates.parentLayoutCoordinates?.size?.height ?: coordinates.size.height
+                        )
                     },
-                textStyle = TextStyle(
-                    fontSize = uiState.textSizeSp.sp,
-                    fontWeight = uiState.fontWeight,
-                    fontStyle = uiState.fontStyle,
-                    color = uiState.textColor
-                ),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = uiState.backgroundColor,
-                    unfocusedContainerColor = uiState.backgroundColor,
-                    disabledContainerColor = uiState.backgroundColor,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                placeholder = { Text("Start typing...") }
+                decorationBox = { innerTextField ->
+                    if (textFieldValue.text.isEmpty()) {
+                        Text(
+                            text = "Start typing...",
+                            style = textStyle.copy(color = uiState.textColor.copy(alpha = 0.5f))
+                        )
+                    }
+                    innerTextField()
+                }
             )
         }
     }

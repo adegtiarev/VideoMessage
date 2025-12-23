@@ -30,7 +30,18 @@ fun VideoMessageNavigation(
             )
         }
         composable(Destinations.TEXT_VIDEO) {
-            TextVideoScreen(onBack = { navController.popBackStack() })
+            TextVideoScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPlayer = { path ->
+                    navController.navigate("player/$path") {
+                        // Убираем экран создания видео из стека, чтобы при нажатии "Назад"
+                        // пользователь попадал в Home, а не обратно в экран создания
+                        popUpTo(Destinations.HOME) {
+                            saveState = false
+                        }
+                    }
+                }
+            )
         }
         composable(Destinations.DRAWING_VIDEO) {
             DrawingVideoScreen(onBack = { navController.popBackStack() })
