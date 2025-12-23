@@ -34,8 +34,7 @@ fun VideoMessageNavigation(
                 onBack = { navController.popBackStack() },
                 onNavigateToPlayer = { path ->
                     navController.navigate("player/$path") {
-                        // Убираем экран создания видео из стека, чтобы при нажатии "Назад"
-                        // пользователь попадал в Home, а не обратно в экран создания
+                        // Убираем экран создания видео из стека
                         popUpTo(Destinations.HOME) {
                             saveState = false
                         }
@@ -44,7 +43,17 @@ fun VideoMessageNavigation(
             )
         }
         composable(Destinations.DRAWING_VIDEO) {
-            DrawingVideoScreen(onBack = { navController.popBackStack() })
+            DrawingVideoScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPlayer = { path ->
+                    navController.navigate("player/$path") {
+                        // Точно такая же логика: убираем экран рисования из стека
+                        popUpTo(Destinations.HOME) {
+                            saveState = false
+                        }
+                    }
+                }
+            )
         }
         composable(Destinations.PLAYER) { backStackEntry ->
             val videoPath = backStackEntry.arguments?.getString("videoPath") ?: ""
