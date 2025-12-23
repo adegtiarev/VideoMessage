@@ -24,9 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,10 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,16 +53,10 @@ fun TextVideoScreen(
     viewModel: TextVideoViewModel = hiltViewModel()
 ) {
     val isRecording by viewModel.isRecording.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    // --- Временное состояние (позже перенесем во ViewModel) ---
-    var text by remember { mutableStateOf("") }
-    var textSizeSp by remember { mutableFloatStateOf(24f) }
-    
-    var fontWeight by remember { mutableStateOf(FontWeight.Normal) }
-    var fontStyle by remember { mutableStateOf(FontStyle.Normal) }
-    
-    var textColor by remember { mutableStateOf(Color.Black) }
-    var backgroundColor by remember { mutableStateOf(Color.White) }
+    // Локальное состояние для TextFieldValue, чтобы курсор работал корректно
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(text = uiState.text)) }
 
     // Состояния видимости меню
     var showSizeMenu by remember { mutableStateOf(false) }
@@ -87,7 +83,16 @@ fun TextVideoScreen(
             "Magenta" to Color.Magenta
         )
     }
-    // ----------------------------------------------------------
+
+    // Обработка навигации
+    LaunchedEffect(Unit) {
+        viewModel.navigateToPlayer.collect { videoPath ->
+            // TODO: реализовать переход к плееру, пока просто лог или ничего
+            // onNavigateToPlayer(videoPath)
+             println("Video saved to: $videoPath")
+             // Можно вызвать колбэк, если бы он был передан
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -109,7 +114,7 @@ fun TextVideoScreen(
                     Box {
                         IconButton(onClick = { showSizeMenu = true }) {
                             Text(
-                                text = "${textSizeSp.toInt()}",
+                                text = "${uiState.textSizeSp.toInt()}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -129,11 +134,11 @@ fun TextVideoScreen(
                                         )
                                     },
                                     onClick = {
-                                        textSizeSp = size
+                                        viewModel.updateStyle(textSizeSp = size)
                                         showSizeMenu = false
                                     },
                                     trailingIcon = {
-                                        if (textSizeSp == size) {
+                                        if (uiState.textSizeSp == size) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
                                                 contentDescription = "Selected",
@@ -152,8 +157,8 @@ fun TextVideoScreen(
                             Text(
                                 text = "A",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = fontWeight,
-                                fontStyle = fontStyle
+                                fontWeight = uiState.fontWeight,
+                                fontStyle = uiState.fontStyle
                             )
                         }
 
@@ -173,12 +178,11 @@ fun TextVideoScreen(
                                 DropdownMenuItem(
                                     text = { Text(name, fontWeight = weight, fontStyle = style) },
                                     onClick = {
-                                        fontWeight = weight
-                                        fontStyle = style
+                                        viewModel.updateStyle(fontWeight = weight, fontStyle = style)
                                         showStyleMenu = false
                                     },
                                     trailingIcon = {
-                                        if (fontWeight == weight && fontStyle == style) {
+                                        if (uiState.fontWeight == weight && uiState.fontStyle == style) {
                                             Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
@@ -193,7 +197,7 @@ fun TextVideoScreen(
                             Icon(
                                 painter = painterResource(R.drawable.ic_text_color),
                                 contentDescription = "Text Color",
-                                tint = textColor
+                                tint = uiState.textColor
                             )
                         }
 
@@ -215,11 +219,11 @@ fun TextVideoScreen(
                                         )
                                     },
                                     onClick = {
-                                        textColor = color
+                                        viewModel.updateStyle(textColor = color)
                                         showTextColorMenu = false
                                     },
                                     trailingIcon = {
-                                        if (textColor == color) {
+                                        if (uiState.textColor == color) {
                                             Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
@@ -241,7 +245,7 @@ fun TextVideoScreen(
                                 Icon(
                                     painter = painterResource(R.drawable.ic_bg_color),
                                     contentDescription = "Background Color",
-                                    tint = backgroundColor,
+                                    tint = uiState.backgroundColor,
                                     modifier = Modifier.padding(2.dp)
                                 )
                             }
@@ -265,11 +269,11 @@ fun TextVideoScreen(
                                         )
                                     },
                                     onClick = {
-                                        backgroundColor = color
+                                        viewModel.updateStyle(backgroundColor = color)
                                         showBgColorMenu = false
                                     },
                                     trailingIcon = {
-                                        if (backgroundColor == color) {
+                                        if (uiState.backgroundColor == color) {
                                             Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
@@ -288,19 +292,32 @@ fun TextVideoScreen(
                 .padding(paddingValues)
         ) {
             TextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.fillMaxSize(),
+                value = textFieldValue,
+                onValueChange = { newValue ->
+                    textFieldValue = newValue
+                    viewModel.updateTextState(
+                        text = newValue.text,
+                        selection = newValue.selection
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                         viewModel.updateTextState(
+                             viewWidth = coordinates.size.width,
+                             viewHeight = coordinates.size.height
+                         )
+                    },
                 textStyle = TextStyle(
-                    fontSize = textSizeSp.sp,
-                    fontWeight = fontWeight,
-                    fontStyle = fontStyle,
-                    color = textColor
+                    fontSize = uiState.textSizeSp.sp,
+                    fontWeight = uiState.fontWeight,
+                    fontStyle = uiState.fontStyle,
+                    color = uiState.textColor
                 ),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = backgroundColor,
-                    unfocusedContainerColor = backgroundColor,
-                    disabledContainerColor = backgroundColor,
+                    focusedContainerColor = uiState.backgroundColor,
+                    unfocusedContainerColor = uiState.backgroundColor,
+                    disabledContainerColor = uiState.backgroundColor,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
