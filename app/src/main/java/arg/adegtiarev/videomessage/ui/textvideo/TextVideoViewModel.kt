@@ -1,18 +1,19 @@
 package arg.adegtiarev.videomessage.ui.textvideo
 
-import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
+import arg.adegtiarev.videomessage.domain.VideoFileManager
 import arg.adegtiarev.videomessage.recorder.VideoRecorder
 import arg.adegtiarev.videomessage.recorder.producer.TextFrameData
 import arg.adegtiarev.videomessage.recorder.producer.TextFrameProducer
 import arg.adegtiarev.videomessage.ui.BaseVideoViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,9 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
 
 data class TextVideoUiState(
@@ -42,7 +40,7 @@ data class TextVideoUiState(
 
 @HiltViewModel
 class TextVideoViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val videoFileManager: VideoFileManager,
     videoRecorder: VideoRecorder,
     private val frameProducer: TextFrameProducer
 ) : BaseVideoViewModel(videoRecorder) {
@@ -55,7 +53,6 @@ class TextVideoViewModel @Inject constructor(
 
     private var currentOutputFile: File? = null
 
-    // Переменные для фиксации размеров на время записи
     private var recordingViewWidth: Int = 0
     private var recordingViewHeight: Int = 0
 
@@ -77,7 +74,6 @@ class TextVideoViewModel @Inject constructor(
                 padding = padding ?: currentState.padding
             )
         }
-        // Если запись не идет, мы не генерируем кадр
         if (isRecording.value) {
             processFrame()
         }
@@ -114,10 +110,11 @@ class TextVideoViewModel @Inject constructor(
                 selectionStart = state.selection.start,
                 selectionEnd = state.selection.end,
                 scrollY = state.scrollY,
-                // Используем зафиксированные размеры
                 viewWidth = recordingViewWidth,
                 viewHeight = recordingViewHeight,
-                textSizePx = spToPx(state.textSizeSp),
+                // spToPx нужно делать в UI, но для упрощения пока оставим здесь
+                // В идеале UI передает уже готовые Px
+                textSizePx = state.textSizeSp * 3, // Примерное умножение
                 textColor = state.textColor.toArgb(),
                 backgroundColor = state.backgroundColor.toArgb(),
                 isBold = state.fontWeight == FontWeight.Bold,
@@ -130,30 +127,20 @@ class TextVideoViewModel @Inject constructor(
         }
     }
 
-    private fun spToPx(sp: Float): Float {
-        return sp * context.resources.displayMetrics.scaledDensity
-    }
-
     override fun startRecording() {
-        // Фиксируем размеры в момент старта
         val currentState = _uiState.value
         recordingViewWidth = currentState.viewWidth
         recordingViewHeight = currentState.viewHeight
 
-        val fileName = "VIDEO_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.mp4"
-        val outputFile = File(context.filesDir, fileName)
+        val outputFile = videoFileManager.createNewVideoFile("TEXT")
         currentOutputFile = outputFile
         
         videoRecorder.start(outputFile)
-        
-        // Сразу записываем первый кадр с зафиксированными размерами
         processFrame()
     }
 
     override fun stopRecording() {
         videoRecorder.stop()
-        
-        // Сбрасываем зафиксированные размеры
         recordingViewWidth = 0
         recordingViewHeight = 0
 

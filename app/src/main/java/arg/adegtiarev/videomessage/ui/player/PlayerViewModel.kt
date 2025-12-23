@@ -13,7 +13,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -38,6 +40,10 @@ class PlayerViewModel @Inject constructor(
     private val _duration = MutableStateFlow(0L)
     val duration = _duration.asStateFlow()
 
+    // Событие для отправки Intent в UI
+    private val _shareIntent = MutableSharedFlow<Intent>()
+    val shareIntent = _shareIntent.asSharedFlow()
+
     val player = ExoPlayer.Builder(context).build().apply {
         setMediaItem(MediaItem.fromUri(Uri.fromFile(videoFile)))
         prepare()
@@ -55,13 +61,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     init {
-        // Запускаем таймер для обновления позиции слайдера
         viewModelScope.launch {
             while (isActive) {
                 if (_isPlaying.value) {
                     _currentPosition.value = player.currentPosition
                 }
-                delay(200) // Обновляем 5 раз в секунду
+                delay(200)
             }
         }
     }
@@ -70,7 +75,6 @@ class PlayerViewModel @Inject constructor(
         if (player.isPlaying) {
             player.pause()
         } else {
-            // Если видео закончилось, начинаем сначала
             if (player.playbackState == Player.STATE_ENDED) {
                 player.seekTo(0)
             }
@@ -89,7 +93,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun shareVideo() {
+    fun onShareVideo() {
         if (!videoFile.exists()) return
 
         val uri = FileProvider.getUriForFile(
@@ -102,10 +106,11 @@ class PlayerViewModel @Inject constructor(
             type = "video/mp4"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            // Добавляем флаг, чтобы запустить активити из контекста приложения
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(Intent.createChooser(intent, "Share video"))
+
+        viewModelScope.launch {
+            _shareIntent.emit(Intent.createChooser(intent, "Share video"))
+        }
     }
 
     override fun onCleared() {

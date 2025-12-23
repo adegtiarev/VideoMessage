@@ -18,11 +18,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,9 +38,17 @@ fun PlayerScreen(
     onBack: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
+
+    // Перехватываем и запускаем Intent
+    LaunchedEffect(Unit) {
+        viewModel.shareIntent.collect { intent ->
+            context.startActivity(intent)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -50,7 +60,7 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.shareVideo() }) {
+                    IconButton(onClick = { viewModel.onShareVideo() }) {
                         Icon(painterResource(R.drawable.ic_share), contentDescription = "Share")
                     }
                     IconButton(onClick = {

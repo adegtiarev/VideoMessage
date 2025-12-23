@@ -1,17 +1,16 @@
 package arg.adegtiarev.videomessage.ui.drawingvideo
 
-import android.content.Context
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.viewModelScope
+import arg.adegtiarev.videomessage.domain.VideoFileManager
 import arg.adegtiarev.videomessage.recorder.VideoRecorder
 import arg.adegtiarev.videomessage.recorder.producer.DrawingFrameData
 import arg.adegtiarev.videomessage.recorder.producer.DrawingFrameProducer
 import arg.adegtiarev.videomessage.recorder.producer.DrawingLine
 import arg.adegtiarev.videomessage.ui.BaseVideoViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
 
 data class DrawingUiState(
@@ -36,7 +32,7 @@ data class DrawingUiState(
 
 @HiltViewModel
 class DrawingVideoViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val videoFileManager: VideoFileManager,
     videoRecorder: VideoRecorder,
     private val frameProducer: DrawingFrameProducer
 ) : BaseVideoViewModel(videoRecorder) {
@@ -130,8 +126,7 @@ class DrawingVideoViewModel @Inject constructor(
     }
 
     override fun startRecording() {
-        val fileName = "VIDEO_DRAW_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.mp4"
-        val outputFile = File(context.filesDir, fileName)
+        val outputFile = videoFileManager.createNewVideoFile("DRAW")
         currentOutputFile = outputFile
 
         videoRecorder.start(outputFile)
