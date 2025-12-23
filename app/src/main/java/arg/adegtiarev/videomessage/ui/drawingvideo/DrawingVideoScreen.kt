@@ -33,6 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,6 +55,12 @@ fun DrawingVideoScreen(
 ) {
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+
+    // Локальное состояние для текущей линии (Preview)
+    // Используем Compose Path для локального рисования
+    var currentPath by remember { mutableStateOf<Path?>(null) }
+    // Счетчик для форсирования перерисовки при drag, так как Path мутабелен
+    var drawTrigger by remember { mutableStateOf(0L) }
 
     // Состояния видимости меню
     var showBrushSizeMenu by remember { mutableStateOf(false) }
@@ -230,18 +240,36 @@ fun DrawingVideoScreen(
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
+                            // Начинаем локальное рисование
+                            val path = Path().apply { moveTo(offset.x, offset.y) }
+                            currentPath = path
+                            
+                            // Сообщаем ViewModel
                             viewModel.onDragStart(offset)
                         },
                         onDrag = { change, _ ->
                             change.consume()
+                            // Обновляем локальный путь
+                            currentPath?.lineTo(change.position.x, change.position.y)
+                            drawTrigger++ // Форсируем рекомпозицию для Canvas
+                            
+                            // Сообщаем ViewModel (асинхронно для записи)
                             viewModel.onDrag(change.position)
                         },
                         onDragEnd = {
+                            // Сбрасываем локальное превью, так как линия теперь в uiState.lines
+                            currentPath = null
                             viewModel.onDragEnd()
                         }
                     )
                 }
         ) {
+            // Читаем drawTrigger чтобы Compose знал, что надо перерисовать при onDrag
+            @Suppress("UNUSED_VARIABLE")
+            val trigger = drawTrigger
+
+            // 1. Рисуем уже завершенные линии (из ViewModel)
+            // Лучше использовать nativeCanvas для отрисовки android.graphics.Path
             drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
                     style = android.graphics.Paint.Style.STROKE
@@ -250,19 +278,25 @@ fun DrawingVideoScreen(
                     isAntiAlias = true
                 }
 
-                // Рисуем уже завершенные линии
                 uiState.lines.forEach { line ->
                     paint.color = line.color
                     paint.strokeWidth = line.strokeWidth
                     canvas.nativeCanvas.drawPath(line.path, paint)
                 }
+            }
 
-                // Рисуем текущую линию
-                uiState.currentLine?.let { line ->
-                    paint.color = line.color
-                    paint.strokeWidth = line.strokeWidth
-                    canvas.nativeCanvas.drawPath(line.path, paint)
-                }
+            // 2. Рисуем текущую линию (локальное превью)
+            // Используем Compose DrawScope для локального Path
+            currentPath?.let { path ->
+                drawPath(
+                    path = path,
+                    color = uiState.brushColor,
+                    style = Stroke(
+                        width = uiState.brushThickness,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
             }
         }
     }

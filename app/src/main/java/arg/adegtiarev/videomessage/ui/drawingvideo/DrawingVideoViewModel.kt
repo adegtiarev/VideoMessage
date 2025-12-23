@@ -30,9 +30,7 @@ data class DrawingUiState(
     val brushThickness: Float = 10f,
     val backgroundColor: Color = Color.White,
     // Список завершенных линий
-    val lines: List<DrawingLine> = emptyList(),
-    // Текущая линия (которую рисуем прямо сейчас)
-    val currentLine: DrawingLine? = null
+    val lines: List<DrawingLine> = emptyList()
 )
 
 @HiltViewModel
@@ -48,6 +46,9 @@ class DrawingVideoViewModel @Inject constructor(
     private val _navigateToPlayer = MutableSharedFlow<String>()
     val navigateToPlayer = _navigateToPlayer.asSharedFlow()
 
+    // Внутренняя текущая линия только для рекордера. UI о ней знать не нужно, он рисует её сам.
+    private var activeLine: DrawingLine? = null
+
     private var currentOutputFile: File? = null
 
     // Настройки кисти
@@ -62,11 +63,12 @@ class DrawingVideoViewModel @Inject constructor(
 
     fun updateBackgroundColor(color: Color) {
         _uiState.update { it.copy(backgroundColor = color) }
-        processFrame() // Обновляем кадр сразу, даже если не рисуем
+        processFrame()
     }
 
     fun clearCanvas() {
-        _uiState.update { it.copy(lines = emptyList(), currentLine = null) }
+        _uiState.update { it.copy(lines = emptyList()) }
+        activeLine = null
         processFrame()
     }
 
@@ -76,39 +78,37 @@ class DrawingVideoViewModel @Inject constructor(
         val path = android.graphics.Path().apply {
             moveTo(startPoint.x, startPoint.y)
         }
-        val newLine = DrawingLine(
+        
+        // Создаем новую активную линию
+        activeLine = DrawingLine(
             path = path,
             color = currentState.brushColor.toArgb(),
             strokeWidth = currentState.brushThickness
         )
         
-        _uiState.update { it.copy(currentLine = newLine) }
+        // UI State НЕ обновляем, чтобы избежать лишней рекомпозиции
         processFrame()
     }
 
     fun onDrag(newPoint: Offset) {
-        val currentLine = _uiState.value.currentLine ?: return
+        val line = activeLine ?: return
         
-        // Модифицируем Path (он мутабельный, но для Compose обновления 
-        // нам нужно обновить ссылку на State или вызвать перерисовку)
-        currentLine.path.lineTo(newPoint.x, newPoint.y)
+        // Просто обновляем путь
+        line.path.lineTo(newPoint.x, newPoint.y)
         
-        // Форсим обновление стейта, чтобы Compose увидел изменение
-        // (хотя объект currentLine тот же, Flow испускает новое значение data class)
-        _uiState.update { it.copy(currentLine = currentLine) }
-        
+        // Отправляем кадр в видео, но UI State не трогаем
         processFrame()
     }
 
     fun onDragEnd() {
-        val currentLine = _uiState.value.currentLine ?: return
+        val line = activeLine ?: return
         
+        // Линия закончена -> добавляем её в список завершенных линий в UI State
         _uiState.update { 
-            it.copy(
-                lines = it.lines + currentLine,
-                currentLine = null
-            ) 
+            it.copy(lines = it.lines + line) 
         }
+        activeLine = null
+        
         processFrame()
     }
 
@@ -118,9 +118,9 @@ class DrawingVideoViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             val state = _uiState.value
             
-            // Собираем все линии для кадра: завершенные + текущая (если есть)
-            val allLines = if (state.currentLine != null) {
-                state.lines + state.currentLine
+            // Собираем все линии для кадра: завершенные + текущая активная
+            val allLines = if (activeLine != null) {
+                state.lines + activeLine!!
             } else {
                 state.lines
             }
