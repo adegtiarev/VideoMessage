@@ -4,7 +4,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.viewModelScope
-import arg.adegtiarev.videomessage.domain.VideoFileManager
+import arg.adegtiarev.videomessage.data.local.VideoType
+import arg.adegtiarev.videomessage.domain.VideoRepository
 import arg.adegtiarev.videomessage.recorder.VideoRecorder
 import arg.adegtiarev.videomessage.recorder.producer.DrawingFrameData
 import arg.adegtiarev.videomessage.recorder.producer.DrawingFrameProducer
@@ -32,7 +33,7 @@ data class DrawingUiState(
 
 @HiltViewModel
 class DrawingVideoViewModel @Inject constructor(
-    private val videoFileManager: VideoFileManager,
+    private val videoRepository: VideoRepository,
     videoRecorder: VideoRecorder,
     private val frameProducer: DrawingFrameProducer
 ) : BaseVideoViewModel(videoRecorder) {
@@ -126,7 +127,7 @@ class DrawingVideoViewModel @Inject constructor(
     }
 
     override fun startRecording() {
-        val outputFile = videoFileManager.createNewVideoFile("DRAW")
+        val outputFile = videoRepository.createNewVideoFile("DRAW")
         currentOutputFile = outputFile
 
         videoRecorder.start(outputFile)
@@ -137,6 +138,7 @@ class DrawingVideoViewModel @Inject constructor(
         videoRecorder.stop()
         currentOutputFile?.let { file ->
             viewModelScope.launch {
+                videoRepository.saveVideo(file, VideoType.DRAWING)
                 _navigateToPlayer.emit(file.name)
             }
         }

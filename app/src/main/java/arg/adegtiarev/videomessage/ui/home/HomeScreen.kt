@@ -13,14 +13,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -29,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,15 +36,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import arg.adegtiarev.videomessage.R
+import arg.adegtiarev.videomessage.data.local.VideoEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToTextVideo: () -> Unit,
     onNavigateToDrawingVideo: () -> Unit,
-    onNavigateToPlayer: (String) -> Unit
+    onNavigateToPlayer: (String) -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val videos by viewModel.videos.collectAsState()
     var isFabExpanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f, label = "fab_rotation")
 
@@ -97,7 +102,7 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        painterResource(R.drawable.ic_record), // Or some other icon
                         contentDescription = "Create Video",
                         modifier = Modifier.rotate(rotation)
                     )
@@ -122,6 +127,7 @@ fun HomeScreen(
              }
             
             VideoList(
+                videos = videos,
                 onVideoClick = onNavigateToPlayer,
                 modifier = Modifier.fillMaxSize()
             )
@@ -131,17 +137,42 @@ fun HomeScreen(
 
 @Composable
 fun VideoList(
+    videos: List<VideoEntity>,
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Placeholder for video list
-    LazyColumn(
-        modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        item {
+    if (videos.isEmpty()) {
+        Box(
+            modifier = modifier.padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Text("No videos created yet", style = MaterialTheme.typography.bodyLarge)
         }
+    } else {
+        LazyColumn(
+            modifier = modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(videos, key = { it.id }) {
+                VideoItem(video = it, onClick = { onVideoClick(it.fileName) })
+            }
+        }
     }
+}
+
+@Composable
+fun VideoItem(video: VideoEntity, onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = video.videoName, style = MaterialTheme.typography.titleMedium)
+            Text(text = "Type: ${video.type}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Created: ${formatTimestamp(video.createdAt)}", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val date = Date(timestamp)
+    val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    return format.format(date)
 }

@@ -2,13 +2,12 @@ package arg.adegtiarev.videomessage.ui.textvideo
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import arg.adegtiarev.videomessage.domain.VideoFileManager
+import arg.adegtiarev.videomessage.data.local.VideoType
+import arg.adegtiarev.videomessage.domain.VideoRepository
 import arg.adegtiarev.videomessage.recorder.VideoRecorder
 import arg.adegtiarev.videomessage.recorder.producer.TextFrameData
 import arg.adegtiarev.videomessage.recorder.producer.TextFrameProducer
@@ -40,7 +39,7 @@ data class TextVideoUiState(
 
 @HiltViewModel
 class TextVideoViewModel @Inject constructor(
-    private val videoFileManager: VideoFileManager,
+    private val videoRepository: VideoRepository,
     videoRecorder: VideoRecorder,
     private val frameProducer: TextFrameProducer
 ) : BaseVideoViewModel(videoRecorder) {
@@ -112,9 +111,7 @@ class TextVideoViewModel @Inject constructor(
                 scrollY = state.scrollY,
                 viewWidth = recordingViewWidth,
                 viewHeight = recordingViewHeight,
-                // spToPx нужно делать в UI, но для упрощения пока оставим здесь
-                // В идеале UI передает уже готовые Px
-                textSizePx = state.textSizeSp * 3, // Примерное умножение
+                textSizePx = state.textSizeSp * 3, // Approximation, should be passed from UI
                 textColor = state.textColor.toArgb(),
                 backgroundColor = state.backgroundColor.toArgb(),
                 isBold = state.fontWeight == FontWeight.Bold,
@@ -132,7 +129,7 @@ class TextVideoViewModel @Inject constructor(
         recordingViewWidth = currentState.viewWidth
         recordingViewHeight = currentState.viewHeight
 
-        val outputFile = videoFileManager.createNewVideoFile("TEXT")
+        val outputFile = videoRepository.createNewVideoFile("TEXT")
         currentOutputFile = outputFile
         
         videoRecorder.start(outputFile)
@@ -146,6 +143,7 @@ class TextVideoViewModel @Inject constructor(
 
         currentOutputFile?.let { file ->
             viewModelScope.launch {
+                videoRepository.saveVideo(file, VideoType.TEXT)
                 _navigateToPlayer.emit(file.name)
             }
         }

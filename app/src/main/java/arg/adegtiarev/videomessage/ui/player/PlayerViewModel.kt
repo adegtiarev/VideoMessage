@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import arg.adegtiarev.videomessage.domain.VideoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -25,6 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val videoRepository: VideoRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -88,8 +90,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun deleteVideo() {
-        if (videoFile.exists()) {
-            videoFile.delete()
+        viewModelScope.launch {
+            videoRepository.deleteVideo(videoFileName)
         }
     }
 
