@@ -59,17 +59,11 @@ fun TextVideoScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Block the system back button during recording
-    BackHandler(enabled = isRecording) {
-        // Can show a Toast indicating recording is in progress
-    }
+    BackHandler(enabled = isRecording) { /* Block back gesture */ }
 
     var textFieldValue by remember { mutableStateOf(TextFieldValue(text = uiState.text)) }
     val scrollState = rememberScrollState()
-
-    // Store the text layout result
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-
     val density = LocalDensity.current
     val paddingInPx = with(density) { 16.dp.toPx() }.toInt()
 
@@ -143,7 +137,6 @@ fun TextVideoScreen(
             VideoCreatorTopBar(
                 title = "Create Text Video",
                 isRecording = isRecording,
-                // Block the back button in the toolbar during recording
                 onBack = { if (!isRecording) onBack() },
                 onToggleRecording = viewModel::onToggleRecording
             )
@@ -172,7 +165,8 @@ fun TextVideoScreen(
                                 DropdownMenuItem(
                                     text = { Text(text = "${size.toInt()} sp", fontSize = if (size > 32f) 32.sp else size.sp) },
                                     onClick = {
-                                        viewModel.updateStyle(textSizeSp = size)
+                                        val sizePx = with(density) { size.sp.toPx() }
+                                        viewModel.updateStyle(textSizeSp = size, textSizePx = sizePx)
                                         showSizeMenu = false
                                     },
                                     trailingIcon = {
@@ -235,9 +229,7 @@ fun TextVideoScreen(
                                 DropdownMenuItem(
                                     text = { Text(name) },
                                     leadingIcon = {
-                                        Box(
-                                            modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape)
-                                        )
+                                        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape))
                                     },
                                     onClick = {
                                         viewModel.updateStyle(textColor = color)
@@ -271,9 +263,7 @@ fun TextVideoScreen(
                                 DropdownMenuItem(
                                     text = { Text(name) },
                                     leadingIcon = {
-                                        Box(
-                                            modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape)
-                                        )
+                                        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(color).border(1.dp, Color.Gray, CircleShape))
                                     },
                                     onClick = {
                                         viewModel.updateStyle(backgroundColor = color)
@@ -306,7 +296,6 @@ fun TextVideoScreen(
                 color = uiState.textColor
             )
             
-            // Use BasicTextField for manual scroll control
             BasicTextField(
                 value = textFieldValue,
                 onValueChange = { newValue ->
@@ -316,7 +305,14 @@ fun TextVideoScreen(
                         selection = newValue.selection
                     )
                 },
-                onTextLayout = { result -> layoutResult = result },
+                onTextLayout = { result -> 
+                    layoutResult = result
+                    // Update text size in px for the first time
+                    if (uiState.textSizePx == 0f) {
+                        val sizePx = with(density) { uiState.textSizeSp.sp.toPx() }
+                        viewModel.updateStyle(textSizePx = sizePx)
+                    }
+                },
                 textStyle = textStyle,
                 cursorBrush = SolidColor(Color.Green),
                 modifier = Modifier
