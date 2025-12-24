@@ -42,7 +42,7 @@ class PlayerViewModel @Inject constructor(
     private val _duration = MutableStateFlow(0L)
     val duration = _duration.asStateFlow()
 
-    // Событие для отправки Intent в UI
+    // Event to send Intent to UI
     private val _shareIntent = MutableSharedFlow<Intent>()
     val shareIntent = _shareIntent.asSharedFlow()
 
@@ -63,12 +63,13 @@ class PlayerViewModel @Inject constructor(
     }
 
     init {
+        // Start timer to update slider position
         viewModelScope.launch {
             while (isActive) {
                 if (_isPlaying.value) {
                     _currentPosition.value = player.currentPosition
                 }
-                delay(200)
+                delay(200) // Update 5 times per second
             }
         }
     }
@@ -77,6 +78,7 @@ class PlayerViewModel @Inject constructor(
         if (player.isPlaying) {
             player.pause()
         } else {
+            // If video ended, restart
             if (player.playbackState == Player.STATE_ENDED) {
                 player.seekTo(0)
             }

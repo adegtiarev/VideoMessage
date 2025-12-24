@@ -59,15 +59,15 @@ fun TextVideoScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Блокируем системную кнопку "Назад" во время записи
+    // Block the system back button during recording
     BackHandler(enabled = isRecording) {
-        // Можно показать Toast, что идет запись
+        // Can show a Toast indicating recording is in progress
     }
 
     var textFieldValue by remember { mutableStateOf(TextFieldValue(text = uiState.text)) }
     val scrollState = rememberScrollState()
 
-    // Храним результат верстки текста
+    // Store the text layout result
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     val density = LocalDensity.current
@@ -143,7 +143,7 @@ fun TextVideoScreen(
             VideoCreatorTopBar(
                 title = "Create Text Video",
                 isRecording = isRecording,
-                // Блокируем кнопку "Назад" в тулбаре во время записи
+                // Block the back button in the toolbar during recording
                 onBack = { if (!isRecording) onBack() },
                 onToggleRecording = viewModel::onToggleRecording
             )
@@ -306,6 +306,7 @@ fun TextVideoScreen(
                 color = uiState.textColor
             )
             
+            // Use BasicTextField for manual scroll control
             BasicTextField(
                 value = textFieldValue,
                 onValueChange = { newValue ->

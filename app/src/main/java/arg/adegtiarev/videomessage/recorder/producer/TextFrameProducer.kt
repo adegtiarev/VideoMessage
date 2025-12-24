@@ -21,8 +21,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Данные для отрисовки кадра текста.
- * Полностью описывают состояние UI в момент времени.
+ * Data for rendering a text frame.
+ * Fully describes the UI state at a moment in time.
  */
 data class TextFrameData(
     val text: String,
@@ -48,19 +48,19 @@ class TextFrameProducer @Inject constructor(
         strokeWidth = 5f
     }
 
-    // Цвет выделения текста
+    // Text selection color
     private val selectionColor = Color.rgb(0, 128, 128)
 
     fun createFrame(data: TextFrameData): Bitmap {
-        // 1. Создаем битмап исходного размера View
-        // Используем viewWidth/Height, если они > 0, иначе фоллбек на видео размеры (для безопасности)
+        // 1. Create a bitmap of the original View size
+        // Use viewWidth/Height if > 0, otherwise fallback to video dimensions for safety
         val w = if (data.viewWidth > 0) data.viewWidth else VideoRecorderImpl.VIDEO_WIDTH
         val h = if (data.viewHeight > 0) data.viewHeight else VideoRecorderImpl.VIDEO_HEIGHT
         
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // Заливка фона
+        // Fill background
         canvas.drawColor(data.backgroundColor)
 
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -77,8 +77,8 @@ class TextFrameProducer @Inject constructor(
 
         val layoutWidth = max(100, w - (data.padding * 2))
 
-        // 2. Создаем полный Layout для расчета строк (легкая операция, текст не рисуется)
-        // Если текст пустой, StaticLayout может упасть или создать 0 линий. Обработаем пустой текст.
+        // 2. Create a full Layout to calculate lines (lightweight operation, text is not drawn)
+        // If the text is empty, StaticLayout might crash or create 0 lines. Handle empty text.
         val safeText = if (data.text.isEmpty()) " " else data.text
         
         val fullTextLayout = StaticLayout.Builder.obtain(
@@ -93,9 +93,9 @@ class TextFrameProducer @Inject constructor(
             .setIncludePad(false)
             .build()
 
-        // 3. Вычисляем видимый диапазон строк
+        // 3. Calculate the visible line range
         val firstVisibleLine = fullTextLayout.getLineForVertical(max(0, data.scrollY))
-        // lastVisibleLine берем чуть с запасом (+ h), чтобы точно покрыть экран
+        // Take lastVisibleLine with a small margin (+h) to cover the screen
         val lastVisibleLine = fullTextLayout.getLineForVertical(max(0, data.scrollY + h))
 
         val lineStart = fullTextLayout.getLineStart(getSafeLayoutLine(fullTextLayout, firstVisibleLine))
@@ -104,13 +104,13 @@ class TextFrameProducer @Inject constructor(
         val visibleText = safeText.substring(lineStart, lineEnd)
         val spannable = SpannableString(visibleText)
 
-        // 4. Расчет выделения для видимой части
+        // 4. Calculate selection for the visible part
         if (data.selectionStart != data.selectionEnd) {
-            // Сдвигаем абсолютные координаты выделения относительно начала видимого текста
+            // Shift absolute selection coordinates relative to the start of the visible text
             val relativeSelStart = data.selectionStart - lineStart
             val relativeSelEnd = data.selectionEnd - lineStart
 
-            // Ограничиваем диапазоном видимого текста
+            // Clamp to the visible text range
             val start = relativeSelStart.coerceIn(0, visibleText.length)
             val end = relativeSelEnd.coerceIn(0, visibleText.length)
 
@@ -126,7 +126,7 @@ class TextFrameProducer @Inject constructor(
             }
         }
 
-        // 5. Создаем Layout для видимой части
+        // 5. Create a Layout for the visible part
         val visibleLayout = StaticLayout.Builder.obtain(
             spannable,
             0,
@@ -139,19 +139,19 @@ class TextFrameProducer @Inject constructor(
             .setIncludePad(false)
             .build()
 
-        // 6. Отрисовка с учетом плавного скролла
+        // 6. Draw with smooth scrolling in mind
         canvas.save()
         
-        // Вычисляем смещение по Y
+        // Calculate Y offset
         val firstVisibleLineTop = fullTextLayout.getLineTop(firstVisibleLine)
-        val yOffset = firstVisibleLineTop - data.scrollY // Будет <= 0 или около того
+        val yOffset = firstVisibleLineTop - data.scrollY // Will be <= 0 or around that
         
-        // Смещаем канвас: padding по X, yOffset по Y + padding по Y (если в UI текст начинается с паддинга)
+        // Translate canvas: padding on X, yOffset on Y + padding on Y (if text in UI starts with padding)
         canvas.translate(data.padding.toFloat(), yOffset.toFloat() + data.padding.toFloat())
         
         visibleLayout.draw(canvas)
 
-        // 7. Отрисовка курсора
+        // 7. Draw cursor
         if (data.selectionStart == data.selectionEnd) {
             val relativeCursorPos = data.selectionStart - lineStart
             if (relativeCursorPos >= 0 && relativeCursorPos <= visibleText.length) {
@@ -161,7 +161,7 @@ class TextFrameProducer @Inject constructor(
 
         canvas.restore()
 
-        // 8. Масштабирование до размера видео
+        // 8. Scale to video size
         return scaleBitmap(bitmap, VideoRecorderImpl.VIDEO_WIDTH, VideoRecorderImpl.VIDEO_HEIGHT)
     }
 
@@ -190,7 +190,7 @@ class TextFrameProducer @Inject constructor(
         val widthRatio = targetWidth.toFloat() / width.toFloat()
         val heightRatio = targetHeight.toFloat() / height.toFloat()
 
-        // Логика Scale Aspect Fit (вписать целиком)
+        // Scale Aspect Fit logic (fit entirely)
         var finalWidth = floor((width * widthRatio).toDouble()).toInt()
         var finalHeight = floor((height * widthRatio).toDouble()).toInt()
 
@@ -199,7 +199,7 @@ class TextFrameProducer @Inject constructor(
             finalHeight = floor((height * heightRatio).toDouble()).toInt()
         }
         
-        // Используем filter=true для сглаживания при уменьшении
+        // Use filter=true for smoothing when downscaling
         return bitmap.scale(finalWidth, finalHeight, filter = true)
     }
 }

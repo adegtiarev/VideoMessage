@@ -26,6 +26,7 @@ data class DrawingUiState(
     val brushColor: Color = Color.Black,
     val brushThickness: Float = 10f,
     val backgroundColor: Color = Color.White,
+    // List of completed lines
     val lines: List<DrawingLine> = emptyList(),
     val viewWidth: Int = 0,
     val viewHeight: Int = 0
@@ -51,6 +52,7 @@ class DrawingVideoViewModel @Inject constructor(
         _uiState.update { it.copy(viewWidth = width, viewHeight = height) }
     }
 
+    // Brush settings
     fun updateBrush(color: Color? = null, thickness: Float? = null) {
         _uiState.update { 
             it.copy(
@@ -71,6 +73,7 @@ class DrawingVideoViewModel @Inject constructor(
         processFrame()
     }
 
+    // Drawing handling
     fun onDragStart(startPoint: Offset) {
         val currentState = _uiState.value
         val path = android.graphics.Path().apply {

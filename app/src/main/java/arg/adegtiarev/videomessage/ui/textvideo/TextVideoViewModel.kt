@@ -52,6 +52,7 @@ class TextVideoViewModel @Inject constructor(
 
     private var currentOutputFile: File? = null
 
+    // Variables to fix the view dimensions during recording
     private var recordingViewWidth: Int = 0
     private var recordingViewHeight: Int = 0
 
@@ -73,6 +74,7 @@ class TextVideoViewModel @Inject constructor(
                 padding = padding ?: currentState.padding
             )
         }
+        // We don't generate a frame if recording is not active
         if (isRecording.value) {
             processFrame()
         }
@@ -109,9 +111,11 @@ class TextVideoViewModel @Inject constructor(
                 selectionStart = state.selection.start,
                 selectionEnd = state.selection.end,
                 scrollY = state.scrollY,
+                // Use fixed dimensions
                 viewWidth = recordingViewWidth,
                 viewHeight = recordingViewHeight,
-                textSizePx = state.textSizeSp * 3, // Approximation, should be passed from UI
+                // Approximation, should be passed from UI
+                textSizePx = state.textSizeSp * 3,
                 textColor = state.textColor.toArgb(),
                 backgroundColor = state.backgroundColor.toArgb(),
                 isBold = state.fontWeight == FontWeight.Bold,
@@ -125,6 +129,7 @@ class TextVideoViewModel @Inject constructor(
     }
 
     override fun startRecording() {
+        // Fix dimensions at the start of recording
         val currentState = _uiState.value
         recordingViewWidth = currentState.viewWidth
         recordingViewHeight = currentState.viewHeight
@@ -133,11 +138,15 @@ class TextVideoViewModel @Inject constructor(
         currentOutputFile = outputFile
         
         videoRecorder.start(outputFile)
+        
+        // Immediately record the first frame with fixed dimensions
         processFrame()
     }
 
     override fun stopRecording() {
         videoRecorder.stop()
+        
+        // Reset fixed dimensions
         recordingViewWidth = 0
         recordingViewHeight = 0
 

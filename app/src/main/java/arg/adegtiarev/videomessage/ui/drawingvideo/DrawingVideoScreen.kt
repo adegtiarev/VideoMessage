@@ -56,14 +56,17 @@ fun DrawingVideoScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    // Блокируем системную кнопку "Назад" во время записи
+    // Block the system back button during recording
     BackHandler(enabled = isRecording) {
-        // Игнорируем
+        // Ignore
     }
 
+    // Local state for the current path (Preview)
     var currentPath by remember { mutableStateOf<Path?>(null) }
+    // A trigger to force recomposition on drag, since Path is mutable
     var drawTrigger by remember { mutableStateOf(0L) }
 
+    // Menu visibility states
     var showBrushSizeMenu by remember { mutableStateOf(false) }
     var showBrushColorMenu by remember { mutableStateOf(false) }
     var showBgColorMenu by remember { mutableStateOf(false) }
@@ -88,6 +91,7 @@ fun DrawingVideoScreen(
         )
     }
     
+    // Navigation
     LaunchedEffect(Unit) {
         viewModel.navigateToPlayer.collect { videoPath ->
             onNavigateToPlayer(videoPath)
@@ -99,7 +103,7 @@ fun DrawingVideoScreen(
             VideoCreatorTopBar(
                 title = "Create Drawing Video",
                 isRecording = isRecording,
-                // Блокируем кнопку "Назад" в тулбаре во время записи
+                // Block the back button in the toolbar during recording
                 onBack = { if (!isRecording) onBack() },
                 onToggleRecording = viewModel::onToggleRecording
             )
@@ -111,7 +115,7 @@ fun DrawingVideoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Размер кисти
+                    // 1. Brush size
                     Box {
                         IconButton(onClick = { showBrushSizeMenu = true }) {
                             Icon(painterResource(R.drawable.ic_brush_size), contentDescription = "Brush Size")
@@ -146,7 +150,7 @@ fun DrawingVideoScreen(
                         }
                     }
 
-                    // 2. Цвет кисти
+                    // 2. Brush color
                     Box {
                         IconButton(onClick = { showBrushColorMenu = true }) {
                             Icon(
@@ -180,14 +184,13 @@ fun DrawingVideoScreen(
                         }
                     }
 
-                    // 3. Цвет фона
+                    // 3. Background color
                     Box {
                         IconButton(onClick = { showBgColorMenu = true }) {
                             Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
+                                modifier = Modifier.size(24.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -223,7 +226,7 @@ fun DrawingVideoScreen(
                         }
                     }
 
-                    // 4. Очистить
+                    // 4. Clear
                     IconButton(onClick = { viewModel.clearCanvas() }) {
                         Icon(painterResource(R.drawable.ic_clear_all), contentDescription = "Clear Canvas")
                     }
@@ -232,37 +235,45 @@ fun DrawingVideoScreen(
         }
     ) { paddingValues ->
         
+        // Drawing Canvas
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(uiState.backgroundColor)
+                // Track canvas size
                 .onGloballyPositioned { coordinates ->
                     viewModel.updateCanvasSize(coordinates.size.width, coordinates.size.height)
                 }
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
+                            // Start local drawing
                             val path = Path().apply { moveTo(offset.x, offset.y) }
                             currentPath = path
                             viewModel.onDragStart(offset)
                         },
                         onDrag = { change, _ ->
                             change.consume()
+                            // Update local path
                             currentPath?.lineTo(change.position.x, change.position.y)
-                            drawTrigger++ 
+                            drawTrigger++ // Force recomposition for Canvas
+                            // Notify ViewModel (asynchronously for recording)
                             viewModel.onDrag(change.position)
                         },
                         onDragEnd = {
+                            // Reset local preview, as the line is now in uiState.lines
                             currentPath = null
                             viewModel.onDragEnd()
                         }
                     )
                 }
         ) {
+            // Read drawTrigger to let Compose know it needs to redraw onDrag
             @Suppress("UNUSED_VARIABLE")
             val trigger = drawTrigger
 
+            // 1. Draw completed lines (from ViewModel)
             drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
                     style = android.graphics.Paint.Style.STROKE
@@ -278,6 +289,7 @@ fun DrawingVideoScreen(
                 }
             }
 
+            // 2. Draw current line (local preview)
             currentPath?.let { path ->
                 drawPath(
                     path = path,
