@@ -4,7 +4,7 @@
 
 Unlike standard screen recorders that capture the entire display buffer, this project utilizes a custom rendering engine that translates Jetpack Compose state changes into a video stream in real-time, allowing for high-quality, resolution-independent video generation.
 
-<video src="demo.mp4" width="300" controls></video>
+![Video Message Demo](demo.gif)
 
 ## 🎯 Concept & Motivation
 
