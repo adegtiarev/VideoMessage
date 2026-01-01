@@ -76,7 +76,7 @@ This is the core of the PoC.
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/VideoMessage.git
+    git clone https://github.com/adegtiarev/VideoMessage.git
     ```
 2.  **Open in Android Studio:** Ensure you are using the latest stable version (Ladybug or newer recommended).
 3.  **Sync Gradle:** The project uses KSP and Version Catalogs. Wait for the sync to complete.
@@ -88,7 +88,3 @@ This is the core of the PoC.
 *   **Video Export Settings:** Allow users to choose resolution and FPS before recording.
 *   **Undo/Redo:** Implement command pattern for drawing actions.
 *   **Complex Text Layouts:** Support for rich text editing (different styles within the same paragraph).
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
